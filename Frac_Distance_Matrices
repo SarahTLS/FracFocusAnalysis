@@ -1,0 +1,65 @@
+#### PURPOSE OF SCRIPT ####
+# This is a script written for PyQGIS which outputs the nearest neighbor for each emission in a well (API Number) in the open fracfocus data.
+# This output can be used to find inconsistencies in the reported location of each individual well.
+
+#### DATA SOURCE AND PRE-PROCESSING ####
+# This script takes as an input a shapefile from the full OpenFracFocus dataset (as of 3/20/20). Prior to this analysis, the locations of the points in that dataset
+# had all beeen changed from three coordinate systems (NAD83, NAD27, WGS84) into NAD83. That shapefile was then projected into the World Azimuthal Equidistant (ESRI:54332) projection
+# which conserves direction and distances. An additional index was added as an attribute to that dataset "field_1" as well.
+
+
+#### SCRIPT ####
+
+
+##import QGIS modules needed
+import processing
+from processing.core.Processing import Processing
+
+## define the funciton to create a distance matrix for a particular well
+
+def layer_dist_matrix(input_field, input_number):
+
+    #choose field to select layer based on (in our case, we will use APINumber to create a layer for each well)
+    param1 =str(input_field + '=' + input_number)  # input_number will be used to reference a particular well
+    fraclayer.selectByExpression(param1,QgsVectorLayer.SetSelection)
+
+    #create layer from selected features (in our case, create a layer for the given API Number)
+    layer = iface.activeLayer()
+    new_layer = layer.materialize(QgsFeatureRequest().setFilterFids(layer.selectedFeatureIds()))
+    newlayername = str(input_field + str(input_number))
+    new_layer.setName(newlayername)  # rename new layer based on its API Number
+    #QgsProject.instance().addMapLayer(new_layer) # add new layer to map
+
+    # output CSVs to its own directory 
+    matrixpath = matrixfolder + '/' + input_field + str(input_number) + '.csv'
+    outputlayer = QgsProcessingOutputLayerDefinition(matrixpath)
+    
+    # Run the distance matrix processing algorithm on that layer, asking only for the nearest neighbor (nearest points:1)
+    processing.core.Processing.Processing.initialize()
+    processing.run("qgis:distancematrix", {'INPUT':new_layer,'INPUT_FIELD':"field_1","TARGET":new_layer,"TARGET_FIELD":"field_1","MATRIX_TYPE":"0","NEAREST_POINTS":1,"OUTPUT":outputlayer})
+
+
+## define inputs
+fracdatapath = r"C:/Users/Sarah/Desktop/Learning_python_CSVs/FracData/fracazimuth.shp"  # path to shapefile
+matrixfolder = r"C:/Users/Sarah/Desktop/Learning_python_CSVs/FracData/Frac_dist_matrices" # path to folder where output CSVs will be stored
+input_field = "APINumber"
+
+# create layer for the fracdata shapfile
+fraclayer = QgsVectorLayer(fracdatapath,"fracdata","ogr")  
+QgsProject.instance().addMapLayer(fraclayer) 
+
+# Create list to iterate the loop through (I.e., a list with each individual API Number)
+
+listall = []
+for i in fraclayer.getFeatures():
+    listall.append(i.attributes())
+
+APINums = [item[2] for item in listall]
+APINums_clean = list(set(APINums))
+
+## Run the function for each well. The output should be ~46,000 individual CSVs
+
+for input_number in APINums_clean:
+    layer_dist_matrix(input_field,input_number)
+
+
