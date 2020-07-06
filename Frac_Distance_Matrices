@@ -16,7 +16,6 @@ import processing
 from processing.core.Processing import Processing
 
 ## define the funciton to create a distance matrix for a particular well
-
 def layer_dist_matrix(input_field, input_number):
 
     #choose field to select layer based on (in our case, we will use APINumber to create a layer for each well)
@@ -49,7 +48,6 @@ fraclayer = QgsVectorLayer(fracdatapath,"fracdata","ogr")
 QgsProject.instance().addMapLayer(fraclayer) 
 
 # Create list to iterate the loop through (I.e., a list with each individual API Number)
-
 listall = []
 for i in fraclayer.getFeatures():
     listall.append(i.attributes())
@@ -58,7 +56,6 @@ APINums = [item[2] for item in listall]
 APINums_clean = list(set(APINums))
 
 ## Run the function for each well. The output should be ~46,000 individual CSVs
-
 for input_number in APINums_clean:
     layer_dist_matrix(input_field,input_number)
 
